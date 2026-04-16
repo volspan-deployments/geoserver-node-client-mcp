@@ -24,7 +24,7 @@ async def tools(request):
     tool_list = [{"name": t.name, "description": t.description or ""} for t in registered]
     return JSONResponse({"tools": tool_list, "count": len(tool_list)})
 
-mcp_app = mcp.http_app(transport="streamable-http")
+mcp_app = mcp.http_app(transport="streamable-http", stateless_http=True)
 
 class _FixAcceptHeader:
     """Ensure Accept header includes both types FastMCP requires."""
