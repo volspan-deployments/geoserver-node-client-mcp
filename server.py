@@ -24,30 +24,15 @@ async def tools(request):
     tool_list = [{"name": t.name, "description": t.description or ""} for t in registered]
     return JSONResponse({"tools": tool_list, "count": len(tool_list)})
 
-mcp_app = mcp.http_app(transport="streamable-http", stateless_http=True)
+sse_app = mcp.http_app(transport="sse")
 
-class _FixAcceptHeader:
-    """Ensure Accept header includes both types FastMCP requires."""
-    def __init__(self, app):
-        self.app = app
-    async def __call__(self, scope, receive, send):
-        if scope["type"] == "http":
-            headers = dict(scope.get("headers", []))
-            accept = headers.get(b"accept", b"").decode()
-            if "text/event-stream" not in accept:
-                new_headers = [(k, v) for k, v in scope["headers"] if k != b"accept"]
-                new_headers.append((b"accept", b"application/json, text/event-stream"))
-                scope = dict(scope, headers=new_headers)
-        await self.app(scope, receive, send)
-
-app = _FixAcceptHeader(Starlette(
+app = Starlette(
     routes=[
         Route("/health", health),
         Route("/tools", tools),
-        Mount("/", mcp_app),
+        Mount("/", sse_app),
     ],
-    lifespan=mcp_app.lifespan,
-))
-
+    lifespan=sse_app.lifespan,
+)
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
